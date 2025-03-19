@@ -1,14 +1,9 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
 import { Heart } from "lucide-react";
 import HealthCardPlans from "@/components/health-card-plans";
 
 export default function LandingPage() {
   const { user } = useAuth();
-  
-  if (user) {
-    return <Redirect to="/" />;
-  }
 
   return (
     <div className="min-h-screen">
@@ -19,9 +14,15 @@ export default function LandingPage() {
               <Heart className="w-6 h-6" />
               <span className="font-bold text-lg">HealthCard</span>
             </div>
-            <a href="/auth" className="hover:bg-primary-foreground/10 px-4 py-2 rounded-md transition-colors">
-              Sign In
-            </a>
+            {user ? (
+              <a href="/dashboard" className="hover:bg-primary-foreground/10 px-4 py-2 rounded-md transition-colors">
+                Dashboard
+              </a>
+            ) : (
+              <a href="/auth" className="hover:bg-primary-foreground/10 px-4 py-2 rounded-md transition-colors">
+                Sign In
+              </a>
+            )}
           </div>
         </div>
       </header>
@@ -35,7 +36,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <HealthCardPlans onApply={() => window.location.href = '/auth'} />
+        <HealthCardPlans onApply={() => window.location.href = user ? '/dashboard' : '/auth'} />
       </main>
     </div>
   );
