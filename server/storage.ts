@@ -54,6 +54,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.healthCards.values());
   }
 
+  async getHealthCard(id: number): Promise<HealthCard | undefined> {
+    return this.healthCards.get(id);
+  }
+
   async getPartners(): Promise<Partner[]> {
     return Array.from(this.partners.values());
   }

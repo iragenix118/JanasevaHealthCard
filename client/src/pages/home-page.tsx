@@ -7,9 +7,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { HealthCard, UserCard } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function HomePage() {
   const { toast } = useToast();
-  
+
   const { data: healthCards, isLoading: isLoadingCards } = useQuery<HealthCard[]>({
     queryKey: ["/api/health-cards"],
   });
@@ -18,16 +24,53 @@ export default function HomePage() {
     queryKey: ["/api/user-cards"],
   });
 
-  const applyMutation = useMutation({
+  const createPaymentMutation = useMutation({
     mutationFn: async (cardId: number) => {
-      const res = await apiRequest("POST", `/api/apply-card/${cardId}`);
+      const res = await apiRequest("POST", "/api/create-payment", { cardId });
       return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user-cards"] });
+    onSuccess: (data) => {
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "HealthCard",
+        description: "Health Card Application Payment",
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await apiRequest("POST", "/api/verify-payment", response);
+            const userCard = await verifyRes.json();
+            queryClient.invalidateQueries({ queryKey: ["/api/user-cards"] });
+            toast({
+              title: "Payment successful",
+              description: "Your card application has been processed.",
+            });
+          } catch (error) {
+            toast({
+              title: "Verification failed",
+              description: "Payment verification failed. Please contact support.",
+              variant: "destructive",
+            });
+          }
+        },
+        prefill: {
+          name: "User Name",
+          email: "user@example.com",
+        },
+        theme: {
+          color: "#000000",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    },
+    onError: (error: Error) => {
       toast({
-        title: "Application submitted",
-        description: "Your card application has been received.",
+        title: "Payment failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -52,7 +95,7 @@ export default function HomePage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {healthCards?.map((card) => {
           const hasApplied = userCards?.some((uc) => uc.cardId === card.id);
-          
+
           return (
             <Card key={card.id} className="relative">
               {card.tier === "Gold" && (
@@ -60,7 +103,7 @@ export default function HomePage() {
                   <Badge className="bg-yellow-500">Premium</Badge>
                 </div>
               )}
-              
+
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShieldPlus className="h-5 w-5 text-primary" />
@@ -68,18 +111,18 @@ export default function HomePage() {
                 </CardTitle>
                 <CardDescription>{card.description}</CardDescription>
               </CardHeader>
-              
+
               <CardContent className="space-y-4">
                 <div>
                   <div className="text-2xl font-bold">
-                    ${card.monthlyPremium}
+                    ₹{card.monthlyPremium}
                     <span className="text-sm font-normal text-muted-foreground">/month</span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Up to ${card.coverageLimit.toLocaleString()} coverage
+                    Up to ₹{card.coverageLimit.toLocaleString()} coverage
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="font-medium">Benefits:</div>
                   <ul className="space-y-1">
@@ -92,12 +135,12 @@ export default function HomePage() {
                   </ul>
                 </div>
               </CardContent>
-              
+
               <CardFooter>
                 <Button 
                   className="w-full" 
-                  onClick={() => applyMutation.mutate(card.id)}
-                  disabled={hasApplied || applyMutation.isPending}
+                  onClick={() => createPaymentMutation.mutate(card.id)}
+                  disabled={hasApplied || createPaymentMutation.isPending}
                 >
                   {hasApplied ? "Applied" : "Apply Now"}
                 </Button>
