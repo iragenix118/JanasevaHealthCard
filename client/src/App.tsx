@@ -7,6 +7,7 @@ import Navigation from "./components/navigation";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
+import LandingPage from "@/pages/landing-page";
 import BenefitsComparison from "@/pages/benefits-comparison";
 import Partners from "@/pages/partners";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -14,8 +15,9 @@ import { ProtectedRoute } from "./lib/protected-route";
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={HomePage} />
+      <ProtectedRoute path="/dashboard" component={HomePage} />
       <ProtectedRoute path="/benefits" component={BenefitsComparison} />
       <ProtectedRoute path="/partners" component={Partners} />
       <Route component={NotFound} />
